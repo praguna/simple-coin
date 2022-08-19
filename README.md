@@ -1,1 +1,1 @@
-# simple-coin
+# toy-coin
