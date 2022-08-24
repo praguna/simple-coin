@@ -8,6 +8,7 @@ class ToyClient(object):
         self.addr = None
         self.chain = []
         self.nodes = []
+        self.requests = []
         self.my_addr = []
 
     def register(self, pharse = None):
@@ -23,14 +24,12 @@ class ToyClient(object):
         '''
         starts adding transactions to the network
         '''
-        self.sync_nodes() #update the node list to send to
         self.broad_cast(self.addr)
         ts = self.fetch_transactions() #get all transaction objects of same timestamp
         self.sync_chain() #make sure largest chain is present
         is_valid = self.validate_transactions(ts) 
         if not is_valid: return (False, ts)
         block = self.find_nonce(ts) # proof of work
-        self.sync_nodes() #update the node list to send to
         votes = self.broad_cast(block) #send to all nodes
         if votes >= 0.51: self.add_block(block)
         else: self.sync_chain() #make sure largest chain is present
@@ -39,7 +38,6 @@ class ToyClient(object):
         '''
         submit transaction for verification
         '''
-        self.sync_nodes() #update the node list to send
         self.broad_cast(transaction)
         is_verified = False
         while not is_verified:
@@ -61,12 +59,6 @@ class ToyClient(object):
         block = self.package_block(ts, nonce) 
         # logic to find the right nonce
         return block
-
-    def sync_nodes(self):
-        '''
-        from the message list / wait till broadcast
-        '''
-        pass
     
     def fetch_transactions(self):
         '''
