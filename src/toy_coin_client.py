@@ -44,8 +44,14 @@ class ToyClient(object):
         is_verified = False
         while not is_verified:
             self.sync_chain() #make sure largest chain is present
-            is_verified = self.verify_transaction(transaction.timestamp)
+            is_verified = self.verify_transaction(transaction)
         return is_verified
+    
+    def verify_transaction(self, transaction):
+        '''
+        find the block using timestamp and the branch of the transaction
+        '''
+        pass
     
     def find_nonce(self, ts):
         '''
