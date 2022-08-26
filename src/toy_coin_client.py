@@ -7,7 +7,6 @@ class ToyClient(object):
         self.is_miner = is_miner
         self.addr = None
         self.chain = []
-        self.nodes = []
         self.requests = []
         self.my_addr = []
 
