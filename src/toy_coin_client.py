@@ -1,29 +1,59 @@
+import pickle as pk
+import os, tqdm
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives._serialization import Encoding,PublicFormat,BestAvailableEncryption,PrivateFormat
+
+password = b'ABCD' #dummy password
+
+'''
+generate private & public keys
+'''
+def generate_keys(num_keys = 5):
+    if not os.path.exists('keys'): os.mkdir('keys')
+    for _ in tqdm.tqdm(range(num_keys)): 
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
+        )
+        prk = private_key.private_bytes(encoding=Encoding.PEM, format=PrivateFormat.OpenSSH, encryption_algorithm=BestAvailableEncryption(password))
+        pubk = private_key.public_key().public_bytes(encoding=Encoding.OpenSSH, format=PublicFormat.OpenSSH)
+        key_idx = int.from_bytes(os.urandom(1), byteorder="big")
+        with open(f'keys/{key_idx}.pk' , 'wb') as f: 
+            pk.dump({'public' : pubk, 'private' : prk}, f)
+
+'''
+Simple network High level class which we will use to communicate with other nodes 
+'''
+class AbstractNetwork(object):
+    def send_messages(self): pass
+
+
 '''
 Client for Toy Coin, to interact with the network
 '''
 class ToyClient(object):
     
-    def __init__(self ,is_miner = True) -> None:
+    def __init__(self ,network : AbstractNetwork , node_addr = None, is_miner = True) -> None:
         self.is_miner = is_miner
-        self.addr = None
+        self.exit = False
+        self.network = network
+        assert node_addr is not None
+        self.addr = node_addr
         self.chain = []
-        self.requests = []
-        self.my_addr = []
+        self.messages = []
 
-    def register(self, pharse = None):
+    def register_from_json(self, key_idx):
         '''
-        create keys with the pharse
+        register a key-pair with the client with the key_idx from keys/{key_idx}.pk file, called for each operation
         '''
-        assert pharse is not None
-        self.pharse = pharse
-        return self.generate_keys(pharse)
+        pass
     
 
     def mine_network(self):
         '''
         starts adding transactions to the network
         '''
-        self.broad_cast(self.addr)
         ts = self.fetch_transactions() #get all transaction objects of same timestamp
         self.sync_chain() #make sure largest chain is present
         is_valid = self.validate_transactions(ts) 
@@ -43,6 +73,12 @@ class ToyClient(object):
             self.sync_chain() #make sure largest chain is present
             is_verified = self.verify_transaction(transaction)
         return is_verified
+    
+    def view_balance(self):
+        '''
+        Find the balance of each client
+        '''
+        pass
     
     def verify_transaction(self, transaction):
         '''
@@ -95,8 +131,7 @@ class ToyClient(object):
         '''
         pass
     
-    def generate_keys(self):
-        '''
-        generate private & public keys
-        '''
-        pass
+
+    def add_to_messages(self, msg):
+        ''' messages recieved from the network '''
+        self.messages.append(msg)
