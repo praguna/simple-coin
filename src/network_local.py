@@ -34,7 +34,9 @@ class Network(AbstractNetwork):
     def mine_local_network(self, toyClient : ToyClient):
         print('Starting miner at node :',toyClient.addr)
         while toyClient.is_miner:
-            toyClient.mine_network()
+            # try:
+                toyClient.mine_network()
+            # except Exception as e: print(e)
         print('Closing miner at node :',toyClient.addr)
         
     def listen_to_messages(self, toyClient : ToyClient):
@@ -42,10 +44,18 @@ class Network(AbstractNetwork):
         while not toyClient.exit:
             q  : Queue = self.nodes[toyClient.addr]
             while not q.empty():
-                 msg = q.get()
-                 toyClient.add_to_messages(msg)
+                # try:
+                    msg = q.get()
+                    toyClient.add_to_messages(msg)
+                # except Exception as e: print(e)
         print('Closing message queue at node:',toyClient.addr)
                   
-    def send_messages(self, toyClient : ToyClient, message):
+    def send_messages(self, toyClient : ToyClient, message, call_back = None):
+        objs = [] # only for call back
         for k,v in self.nodes.items():
-            if k.addr != toyClient.addr: v.put(message)
+            if self.clients[k].addr != toyClient.addr: 
+                if call_back: 
+                    msg, tr_hash = message(self.clients[k].miner_key_idx)
+                    v.put(msg), objs.append(tr_hash)
+                else: v.put(message)
+        return objs
