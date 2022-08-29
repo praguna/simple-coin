@@ -1,3 +1,4 @@
+import uuid
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
@@ -18,6 +19,7 @@ class Transaction(object):
         self.sender = data['sender']
         self.message = pk.dumps(data)
         self.meta = meta
+        self.trans_id = data['id']
     
     def verify_local(self):
          assert all([v > 0 for _,v in self.inputs]), "not >0"
@@ -26,10 +28,11 @@ class Transaction(object):
     
 
     def create_transaction_meta(priv_key, pub_key, inputs : list, output : float):
+        id =  uuid.uuid4().hex
         data = pk.dumps({'timestamp' : int(time.time() * 1000), 'inputs' : inputs, 
-        'output' : output, 'sender' : pub_key})
+        'output' : output, 'sender' : pub_key, 'id' : id})
         hash = pk.dumps(priv_key.sign(data, padding.PSS(mgf=padding.MGF1(hashes.SHA256()),salt_length=padding.PSS.MAX_LENGTH),hashes.SHA256()))
-        return [{'data' : data, 'hash' : hash}]
+        return [{'data' : data, 'hash' : hash, 'id' : id}]
     
     def __str__(self) -> str:
         inputs = [[str(u)[:20] + '...', str(v)] for (u,v) in self.inputs]
@@ -38,7 +41,8 @@ class Transaction(object):
             'sender' : str(self.sender)[:20] + '...' if not self.meta else str(self.sender)[:20] + '... key_index ' + self.meta['sender'], 
             'inputs' : inputs if not self.meta else list(meta_input),
             'output' : self.output,
-            'hash' : self.hashcode.hex()[:20] + '...'
+            'hash' : self.hashcode.hex()[:20] + '...',
+            'id' : self.trans_id
         }
         return json.dumps(output)
 
@@ -55,9 +59,9 @@ class Block(object):
     def verify_local(self):
         for e in self.transactions: e.verify_local()
 
-    def not_present_already(self, hash):
+    def not_present_already(self, id):
         for e in self.transactions: 
-            if e.hashcode == hash: return False
+            if e.trans_id == id: return False
         return True
     
     def get_tr_hash(self):

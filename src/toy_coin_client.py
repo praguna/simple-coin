@@ -1,9 +1,8 @@
-from distutils.command.build import build
 from enum import Enum
 import pickle as pk
 import os, tqdm, copy
+import threading
 from queue import Queue
-import random as r
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives._serialization import Encoding,PublicFormat,BestAvailableEncryption,PrivateFormat
@@ -85,6 +84,7 @@ class ToyClient(object):
         self.block_list = Queue()
         self.keys = None
         self.miner_key_idx = None
+        self.lock = threading.Lock()
 
     def register(self, key_idx):
         '''
@@ -130,7 +130,7 @@ class ToyClient(object):
             s = sum([b for _,b in inputs])
             tr = Transaction.create_transaction_meta(self.keys['private'], self.keys['public'], inputs, s)
             msg = {'type' : MessageType.Tr,  'tr' : tr , 'meta' :[{'sender' : self.key_idx + '.pk', 'inputs' : new_transaction, 'pub_key' : self.keys['public']}]}
-            return msg , tr[0]['hash']
+            return msg , tr[0]['id']
         return get_msg
 
 
@@ -141,15 +141,15 @@ class ToyClient(object):
         '''
         print('sending the transaction ...')
         msg_func = self.build_msg(transaction)
-        encoded_hashes = self.network.send_messages(self, msg_func, call_back=True)
+        ids = self.network.send_messages(self, msg_func, call_back=True)
         is_verified = False
         s, e = time.time(), time.time()
         print('waiting for verification ... (max 10 secs) timeout')
-        hash = [pk.loads(e) for e in encoded_hashes]
+        ids = [e for e in ids]
         while not is_verified and (e - s <= 10):
-            is_verified = self.verify_transaction(hash)
+            is_verified = self.verify_transaction(ids)
             e = time.time()
-        if not is_verified: print("Was not able to verify the transaction!, retry verification with the hash")
+        if not is_verified: print("Was not able to verify the transaction!, retry verification with the id")
         return is_verified
     
     def view_balance(self):
@@ -159,12 +159,12 @@ class ToyClient(object):
         e = self.chain[-1]
         return e.check_balance(self.keys['public'])
     
-    def verify_transaction(self, hashes):
+    def verify_transaction(self, ids):
         '''
         find the block using timestamp and the branch of the transaction, assumes no stubbing so the last block
         '''
         e = self.chain[-1]
-        return any([not e.not_present_already(hash) for hash in hashes])
+        return any([not e.not_present_already(id) for id in ids])
     
     def find_nonce(self, block : Block):
         '''
@@ -199,10 +199,13 @@ class ToyClient(object):
         '''
         new blocks in message list
         '''
+        while self.lock.locked(): continue
+        self.lock.acquire()
         prev_block : Block = self.chain[-1]
         is_solved = any([b.prev_hash == block.prev_hash for b in self.chain])
         if is_solved: 
             print("Not adding as the block for this address already exists, node : ",self.addr)
+            self.lock.release()
             return
         try:
             block.verify_local()
@@ -216,10 +219,12 @@ class ToyClient(object):
         except Exception as e:
             print('Invalid transactions in the block found at node ',self.addr,' hence not adding to chain')
             print(e)
+            self.lock.release()
             return
 
         print('Added Block at node : ', self.addr)
         self.chain.append(block)
+        self.lock.release()
 
     def validate_transactions(self, ts_data, ts_meta):
         '''
@@ -228,7 +233,7 @@ class ToyClient(object):
         sender_pk = [e['pub_key'] for e in ts_meta]
         prev_block = self.chain[-1]
         new_block = copy.deepcopy(prev_block)
-        val = all([new_block.not_present_already(e['hash']) for e in ts_data]) # allow new hashes only
+        val = all([new_block.not_present_already(e['id']) for e in ts_data]) # allow new transactions only
         if not val: return val, None
         new_block.update_prev_block_copy(prev_block.get_hash(), ts_data, ts_meta)
         try:
@@ -259,7 +264,8 @@ class ToyClient(object):
         print chain on terminal
         '''
         print()
+        print('Number of blocks : ',len(self.chain))
         for e in self.chain: 
             print(e)
-            print('=>\n\n' if e.get_hash()!=self.chain[-1].get_hash() else '')
+            print('\n=>\n\n' if e.get_hash()!=self.chain[-1].get_hash() else '')
         print()
