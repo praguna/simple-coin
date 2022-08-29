@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -66,6 +67,11 @@ class Block(object):
     
     def get_tr_hash(self):
         return set([e.hashcode for e in self.transactions])
+    
+    def has_proper_tr(self, old_tr = set()):
+        now = self.get_tr_hash()
+        join =  now | old_tr
+        assert join == now, f"Blocks transaction set not same Error : {len(old_tr)} {len(now)}" #replca with merkle root
     
     def get_senders(self, hashes):
         A = []

@@ -211,9 +211,11 @@ class ToyClient(object):
         try:
             assert f'{int(block.get_hash().hex(),16) :0>40b}'[1:9] == '0'*8, "Invalid nonce, Rejecting the block"
             block.verify_local()
-            hashes = block.get_tr_hash() - prev_block.get_tr_hash()
+            prev_hashes = prev_block.get_tr_hash()
+            hashes = block.get_tr_hash() - prev_hashes            
             val = all([prev_block.not_present_already(e) for e in hashes]) # allow new hashes only
-            if not val: raise Exception('Invalid Block : Invalid transaction')
+            if not val or len(hashes) == 0: raise Exception('Invalid Block : Invalid transaction')
+            block.has_proper_tr(prev_hashes)
             sender_pk = block.get_senders(hashes)
             val = all([block.check_balance(pk) >= 0 for pk in sender_pk])
             if not val: raise Exception('Invalid Block : Invalid balance')
