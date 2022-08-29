@@ -1,4 +1,3 @@
-import hashlib
 import uuid
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding
