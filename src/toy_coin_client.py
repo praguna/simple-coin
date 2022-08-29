@@ -176,8 +176,8 @@ class ToyClient(object):
         print('starting nonce puzzle at : ', self.addr)
         s = f'{int(block.get_hash().hex(),16) :0>40b}'[1:9]
         while s != '0'*8: 
-            s = f'{int(block.get_hash().hex(),16) :0>40b}'[1:9]
             block.nonce+=1
+            s = f'{int(block.get_hash().hex(),16) :0>40b}'[1:9]
         print('done with puzzle :', self.addr, time.time(), block.nonce)
         return block
     
@@ -209,6 +209,7 @@ class ToyClient(object):
             self.lock.release()
             return
         try:
+            assert f'{int(block.get_hash().hex(),16) :0>40b}'[1:9] == '0'*8, "Invalid nonce, Rejecting the block"
             block.verify_local()
             hashes = block.get_tr_hash() - prev_block.get_tr_hash()
             val = all([prev_block.not_present_already(e) for e in hashes]) # allow new hashes only
@@ -218,8 +219,7 @@ class ToyClient(object):
             if not val: raise Exception('Invalid Block : Invalid balance')
 
         except Exception as e:
-            print('Invalid transactions in the block found at node ',self.addr,' hence not adding to chain')
-            print(e)
+            print(e, 'at', self.addr)
             self.lock.release()
             return
 
