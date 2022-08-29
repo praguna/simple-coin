@@ -27,8 +27,8 @@ class Transaction(object):
          serialization.load_ssh_public_key(self.sender).verify(self.hashcode, self.message, padding.PSS(mgf=padding.MGF1(hashes.SHA256()),salt_length=padding.PSS.MAX_LENGTH),hashes.SHA256())
     
 
-    def create_transaction_meta(priv_key, pub_key, inputs : list, output : float):
-        id =  uuid.uuid4().hex
+    def create_transaction_meta(priv_key, pub_key, inputs : list, output : float, id : str = None):
+        id =  id if id else uuid.uuid4().hex
         data = pk.dumps({'timestamp' : int(time.time() * 1000), 'inputs' : inputs, 
         'output' : output, 'sender' : pub_key, 'id' : id})
         hash = pk.dumps(priv_key.sign(data, padding.PSS(mgf=padding.MGF1(hashes.SHA256()),salt_length=padding.PSS.MAX_LENGTH),hashes.SHA256()))

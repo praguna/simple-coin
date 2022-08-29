@@ -123,12 +123,13 @@ class ToyClient(object):
         send transaction to a miner, using a closure for network to fill after communication
         '''
         transaction = [(a + '.pk', b) for a,b in transaction]
+        id = uuid.uuid4().hex
         def get_msg(miner_key_idx):
             new_transaction = transaction + [(miner_key_idx + '.pk', 1 / len(self.chain)**2)] #fee
             inputs = [(extract_keys(a)['public'] , b) for a,b in new_transaction] # for Transaction object
             new_transaction = [a for a,_ in new_transaction] # for meta which requires only file name
             s = sum([b for _,b in inputs])
-            tr = Transaction.create_transaction_meta(self.keys['private'], self.keys['public'], inputs, s)
+            tr = Transaction.create_transaction_meta(self.keys['private'], self.keys['public'], inputs, s, id)
             msg = {'type' : MessageType.Tr,  'tr' : tr , 'meta' :[{'sender' : self.key_idx + '.pk', 'inputs' : new_transaction, 'pub_key' : self.keys['public']}]}
             return msg , tr[0]['id']
         return get_msg

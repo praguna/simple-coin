@@ -66,7 +66,7 @@ if __name__ == '__main__':
                 network.stop()
                 break
 
-            print('Command not Found')
+            # print('Command not Found')
             print(help)
         except Exception as e: print(e)
     if os.path.exists('keys') : shutil.rmtree('keys') #clean up
