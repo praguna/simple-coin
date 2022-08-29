@@ -1,4 +1,3 @@
-import random
 from network_local import Network
 import toy_coin_client as tc
 import os, shutil
@@ -22,9 +21,12 @@ if __name__ == '__main__':
     print('Creating first block with 10000 coins in each of these accounts... (No scrutiny!)\n')
     first_block = tc.zero_block() #creating coins here in the accounts to being with
     print(first_block,end='\n\n')
+    os.remove('keys/-1.pk') # removing the zero_key to keep other functionalities unaffected
     print('Registering miner accounts on ',len(clients), ' nodes using the keys ...')
+    miners = {}
     for c, e in zip(clients, os.listdir('keys')): 
         c.register_as_miner(e[:e.index('.pk')])
+        miners[e[:e.index('.pk')]] = c.addr # map to address
         print(f'key_idx {c.miner_key_idx} miner at node {c.addr}')
     print('\n')
     for c in clients: c.chain.append(first_block)
@@ -40,7 +42,9 @@ if __name__ == '__main__':
             if s.split(' ')[0] == 'send': 
                 L = s.split(' ')
                 T = [(L[i] ,float(L[i+1])) for i in range(2, len(L), 2)]
-                clients[0].register(L[1]).send_and_verifiy_transaction(T)
+                idx = 0
+                if L[1] in miners: idx = miners[L[1]] # to see transaction fee reflect (not necessary though for new keys)
+                clients[idx].register(L[1]).send_and_verifiy_transaction(T)
                 continue
             
             if s.split(' ')[0] == 'balance':

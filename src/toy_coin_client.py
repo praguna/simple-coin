@@ -14,7 +14,7 @@ password = b'ABCD' #dummy password
 '''
 generate private & public keys
 '''
-def generate_keys(num_keys = 5):
+def generate_keys(num_keys = 5, key_idx_custom = None):
     if not os.path.exists('keys'): os.mkdir('keys')
     for _ in tqdm.tqdm(range(num_keys)): 
         private_key = rsa.generate_private_key(
@@ -24,6 +24,7 @@ def generate_keys(num_keys = 5):
         prk = private_key.private_bytes(encoding=Encoding.PEM, format=PrivateFormat.OpenSSH, encryption_algorithm=BestAvailableEncryption(password))
         pubk = private_key.public_key().public_bytes(encoding=Encoding.OpenSSH, format=PublicFormat.OpenSSH)
         key_idx = int.from_bytes(os.urandom(1), byteorder="big")
+        if key_idx_custom: key_idx = key_idx_custom
         with open(f'keys/{key_idx}.pk' , 'wb') as f: 
             pk.dump({'public' : pubk, 'private' : prk}, f)
 
@@ -44,7 +45,9 @@ Add the zero block
 def zero_block():
     if not os.path.exists('keys'): raise Exception("keys not found")
     all_keys = os.listdir('keys')
-    zero_user_file = r.choice(all_keys)
+    print('creating zero key-pair which cannot be used again')
+    generate_keys(1, '-1')
+    zero_user_file = '-1.pk' 
     zero_key = extract_keys(zero_user_file)
     inputs = [(extract_keys(e)['public'], 10000) for e in all_keys]
     meta_info = [{'sender' : zero_user_file, 'inputs' : all_keys}]
@@ -121,7 +124,7 @@ class ToyClient(object):
         '''
         transaction = [(a + '.pk', b) for a,b in transaction]
         def get_msg(miner_key_idx):
-            new_transaction = transaction + [(miner_key_idx + '.pk', 1)] #fee
+            new_transaction = transaction + [(miner_key_idx + '.pk', 1 / len(self.chain)**2)] #fee
             inputs = [(extract_keys(a)['public'] , b) for a,b in new_transaction] # for Transaction object
             new_transaction = [a for a,_ in new_transaction] # for meta which requires only file name
             s = sum([b for _,b in inputs])
@@ -137,15 +140,6 @@ class ToyClient(object):
         submit transaction for verification
         '''
         print('sending the transaction ...')
-        # without adding transaction fee
-        # transaction = [(a + '.pk', b) for a,b in transaction]
-        # inputs = [(extract_keys(a)['public'] , b) for a,b in transaction] # for Transaction object
-        # transaction = [a for a,_ in transaction] # for meta which requires only file name
-        # s = sum([b for _,b in inputs])
-        # tr = Transaction.create_transaction_meta(self.keys['private'], self.keys['public'], inputs, s)
-        # msg = {'type' : MessageType.Tr,  'tr' : tr , 'meta' :[{'sender' : self.key_idx + '.pk', 'inputs' : transaction, 'pub_key' : self.keys['public']}]}
-        # self.network.send_messages(self, msg)
-        # encoded_hashes = [tr[0]['hash']] 
         msg_func = self.build_msg(transaction)
         encoded_hashes = self.network.send_messages(self, msg_func, call_back=True)
         is_verified = False
@@ -266,6 +260,6 @@ class ToyClient(object):
         '''
         print()
         for e in self.chain: 
-            print(e, end = '')
+            print(e)
             print('=>\n\n' if e.get_hash()!=self.chain[-1].get_hash() else '')
         print()

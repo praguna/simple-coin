@@ -87,13 +87,13 @@ class Block(object):
         for tr in self.transactions:
             for r,amt in tr.inputs:
                 if r == pk: s+=amt
-                if tr.sender == pk and self.prev_hash: s-=amt # baring first block
+                if tr.sender == pk: s-=amt
         return s
     
     def __str__(self) -> str:
         output = {
             'transactions' : [str(t) for t in self.transactions],
-            'prev_hash' : str(self.prev_hash) if self.prev_hash else None,
+            'prev_hash' : self.prev_hash.hex()[:20] + '...' if self.prev_hash else None,
             'nonce' : self.nonce,
             'block_number' : self.idx
         }
