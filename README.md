@@ -11,7 +11,6 @@ This is an educational implementation of Satoshi's bitcoin : https://bitcoin.org
 
 #### Use the interface to interact with distributed nodes : <br>
 ![alt text](res/cmd.gif)
-* key_idx is a proxy referring to files containing private and public keys.
 <hr>
 
 ####  Setup & Run: 
