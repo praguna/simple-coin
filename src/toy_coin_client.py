@@ -203,12 +203,13 @@ class ToyClient(object):
         while self.lock.locked(): continue
         self.lock.acquire()
         prev_block : Block = self.chain[-1]
-        is_solved = any([b.prev_hash == block.prev_hash for b in self.chain])
-        if is_solved: 
-            print("Not adding as the block for this address already exists, node : ",self.addr)
-            self.lock.release()
-            return
         try:
+            assert prev_block.get_hash() == block.prev_hash, "Invalid block not matching the previous hash"
+            is_solved = any([b.prev_hash == block.prev_hash for b in self.chain])
+            if is_solved: 
+                print("Not adding as the block for this address already exists, node : ",self.addr)
+                self.lock.release()
+                return
             assert f'{int(block.get_hash().hex(),16) :0>40b}'[1:9] == '0'*8, "Invalid nonce, Rejecting the block"
             block.verify_local()
             prev_hashes = prev_block.get_tr_hash()
