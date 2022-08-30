@@ -47,7 +47,7 @@ class Transaction(object):
         return json.dumps(output)
 
 
-
+#  TODO : Futher execises : use merkel Nodes
 class Block(object):
     def __init__(self, tr:list[str], prev_hash = None, idx = 0, nonce = 0, tr_meta = None) -> None:
         self.transactions = [Transaction(e['data'] , e['hash'], f)  for e, f in zip(pk.loads(tr), tr_meta)]

@@ -213,8 +213,7 @@ class ToyClient(object):
             block.verify_local()
             prev_hashes = prev_block.get_tr_hash()
             hashes = block.get_tr_hash() - prev_hashes            
-            val = all([prev_block.not_present_already(e) for e in hashes]) # allow new hashes only
-            if not val or len(hashes) == 0: raise Exception('Invalid Block : Invalid transaction')
+            if len(hashes) == 0: raise Exception('Invalid Block : No new transaction')
             block.has_proper_tr(prev_hashes)
             sender_pk = block.get_senders(hashes)
             val = all([block.check_balance(pk) >= 0 for pk in sender_pk])
